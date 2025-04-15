@@ -1,0 +1,6 @@
+:443 {
+  route {
+    requestlogger
+    reverse_proxy localhost:3000
+  }
+}
