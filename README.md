@@ -12,7 +12,7 @@ Secure. Elegant. Durable.
 
 Shoreline makes it effortless to expose internal services to the outside world — securely, locally, and on your terms. Whether you're triggering CI pipelines, receiving GitHub hooks, or syncing data — Shoreline acts as a trusted gateway to your private network.
 
-No cloud tunnels. No port-forwarding hell. No vendor lock-in.  
+No endless configuration files. No cloud tunnels. No port-forwarding hell. No vendor lock-in.  
 **Just your infrastructure. Your rules.**
 
 ---
