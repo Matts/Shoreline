@@ -1,6 +1,6 @@
-:443 {
-  route {
-    requestlogger
-    reverse_proxy localhost:3000
-  }
+:8080 {
+	route {
+		shorelinelogger
+		respond "ok"
+	}
 }
