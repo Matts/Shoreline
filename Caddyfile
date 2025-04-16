@@ -1,6 +1,10 @@
+{
+	order shorelinelogger before route
+}
+
 :8080 {
+shorelinelogger
 	route {
-		shorelinelogger
 		respond "ok"
 	}
 }
