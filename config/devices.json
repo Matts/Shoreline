@@ -1,0 +1,11 @@
+{
+  "groups": [],
+  "devices": [
+    {
+      "name": "Gateway",
+      "type": "router",
+      "host": "192.168.0.1",
+      "tags": ["network"]
+    }
+  ]
+}
