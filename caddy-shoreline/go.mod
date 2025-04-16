@@ -1,4 +1,4 @@
-module github.com/Matts/Shoreline/caddy-shorelinelogger
+module github.com/Matts/Shoreline/caddy-shoreline
 
 go 1.18
 

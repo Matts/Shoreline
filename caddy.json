@@ -1,0 +1,51 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [":443"],
+          "routes": [
+            {
+              "handle": [
+                {
+                  "handler": "shorelinelogger"
+                }
+              ]
+            },
+            {
+              "match": [
+                {
+                  "host": ["testing.local"],
+                  "path": ["/ping"]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "static_response",
+                  "body": "pong"
+                }
+              ]
+            }
+          ],
+          "tls_connection_policies": [{}]
+        }
+      }
+    },
+    "tls": {
+      "automation": {
+        "policies": [
+          {
+            "issuers": [
+              {
+                "module": "internal"
+              }
+            ],
+            "subjects": [
+              "testing.local"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
