@@ -12,6 +12,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func init() {
@@ -35,15 +37,69 @@ func (ShorelineLogger) CaddyModule() caddy.ModuleInfo {
 
 // Provision implements caddy.Provisioner.
 func (sl *ShorelineLogger) Provision(ctx caddy.Context) error {
-	// Obtain a logger for this module
-	sl.logger = ctx.Logger(sl)
+    lumberjackLogger := &lumberjack.Logger{
+        Filename:   "logs/shoreline.log",
+        MaxSize:    10, // megabytes
+        MaxBackups: 5,
+        MaxAge:     28,   // days
+        Compress:   true, // gzip
+    }
+
+    encoderConfig := zap.NewProductionEncoderConfig()
+    encoderConfig.TimeKey = "ts"
+    encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+    core := zapcore.NewCore(
+        zapcore.NewConsoleEncoder(encoderConfig),
+        zapcore.AddSync(lumberjackLogger),
+        zap.InfoLevel,
+    )
+
+    sl.logger = zap.New(core)
 	return nil
+}
+
+type responseRecorder struct {
+	http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+func (r *responseRecorder) WriteHeader(code int) {
+	r.statusCode = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *responseRecorder) Write(b []byte) (int, error) {
+	r.body.Write(b)
+	return r.ResponseWriter.Write(b)
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 func (sl *ShorelineLogger) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+	rec := &responseRecorder{
+		ResponseWriter: w,
+		statusCode:     200,
+		body:           &bytes.Buffer{},
+	}
+
 	// Build a curl command string representing the incoming HTTP request.
 	var curlCmd strings.Builder
+
+	serverName := "";
+	serverIface := r.Context().Value(caddyhttp.ServerCtxKey)
+	if serverIface != nil {
+		server, ok := serverIface.(*caddyhttp.Server)
+		if ok {
+			serverName = server.Name()
+
+		}
+	}
+
+	curlCmd.WriteString(serverName);
+	curlCmd.WriteString(":")
+	curlCmd.WriteString(r.Host);
+	curlCmd.WriteString(" REQUEST\n")
 	curlCmd.WriteString("curl -X ")
 	curlCmd.WriteString(r.Method)
 
@@ -53,6 +109,7 @@ func (sl *ShorelineLogger) ServeHTTP(w http.ResponseWriter, r *http.Request, nex
 		bodyBytes, _ = io.ReadAll(r.Body)
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))  // restore body
 	}
+
 	if len(bodyBytes) > 0 {
 		// Escape quotes and newlines in body for safe shell command inclusion
 		bodyStr := string(bodyBytes)
@@ -93,7 +150,32 @@ func (sl *ShorelineLogger) ServeHTTP(w http.ResponseWriter, r *http.Request, nex
 	sl.logger.Info(curlCmd.String())
 
 	// Proceed with the next handler
-	return next.ServeHTTP(w, r)
+	err := next.ServeHTTP(rec, r)
+
+	// Log the response status code and body
+	if err == nil {
+		var responseContent strings.Builder
+
+		responseContent.WriteString(serverName);
+		responseContent.WriteString(":")
+		responseContent.WriteString(r.Host);
+		responseContent.WriteString(" RESPONSE\n")
+		responseContent.WriteString(fmt.Sprintf("%d %s\n", rec.statusCode, http.StatusText(rec.statusCode)))
+		for name, values := range r.Header {
+			if name == "Content-Length" {
+				continue
+			}
+			for _, val := range values {
+				responseContent.WriteString(fmt.Sprintf("%s: %s\n", name, val))
+			}
+		}
+		responseContent.WriteString("\nBODY: ");
+		responseContent.WriteString(rec.body.String());
+		responseContent.WriteString("\n");
+		sl.logger.Info(responseContent.String())
+	}
+
+	return err;
 }
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.

@@ -1,9 +1,9 @@
 "use client";
 import {useEffect, useRef, useState, useTransition} from "react";
-import {getServers, updateServerConfig} from "@/app/actions";
+import {getServers, updateServerConfig} from "@/app/caddy-actions";
 import {HttpConfig} from "@/app/types/CaddyServerConfig";
 
-export default function DataView() {
+export default function CaddyEditor() {
   const [data, setData] = useState<HttpConfig | null>(null);
   const [isPending, startTransition] = useTransition();
 
