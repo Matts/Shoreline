@@ -1,5 +1,8 @@
 all:
-	@echo "No default target. Please specify a target."
+	@echo "No target specified. Available targets:"
+	@echo "  caddy: Build Caddy with the Shoreline plugin."
+	@echo "  ui: Build the UI."
+	@echo "  clean: Clean up build artifacts."
 
 caddy: caddy-shoreline/go.mod caddy-shoreline/shorelinelogger.go
 	@echo "Building Caddy..."
@@ -11,12 +14,13 @@ ui/.next/build-manifest.json:
 	@cd ui && npm install && npm run build
 	@echo "UI build complete."
 
-ui: ui/.next/build-manifest.json ui/package.json ui/package-lock.json ui/next.config.js
+ui: ui/.next/build-manifest.json
 	@echo "Built..."
-
 
 clean:
 	@echo "Cleaning up..."
 	@rm -rf ui/.next
 	@rm -rf caddy
 	@echo "Clean complete."
+
+.PHONY: all ui clean help
